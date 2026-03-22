@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OVER 2.5 PRO — AI Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05080b;
+    --s1: #0a0e13;
+    --s2: #0f1419;
+    --s3: #141c24;
+    --border: #1a2530;
+    --border2: #243040;
+    --green: #00ff87;
+    --green2: #00cc6a;
+    --yellow: #ffc107;
+    --orange: #ff8c00;
+    --red: #ff4545;
+    --blue: #38bdf8;
+    --purple: #a78bfa;
+    --text: #dde5ef;
+    --muted: #4a6070;
+    --muted2: #6a8090;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Subtle noise texture overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 16px 80px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 36px 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+    gap: 16px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .brand-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    letter-spacing: 4px;
+    line-height: 1;
+    background: linear-gradient(120deg, var(--green) 0%, var(--blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .brand-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--green);
+    background: rgba(0,255,135,0.08);
+    border: 1px solid rgba(0,255,135,0.2);
+    padding: 3px 8px;
+    border-radius: 2px;
+    margin-bottom: 4px;
+  }
+
+  .header-right {
+    text-align: right;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    margin-right: 5px;
+    animation: blink 2s ease-in-out infinite;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ── LEAGUE FILTER ── */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .league-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+
+  .league-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 5px 11px;
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+    background: var(--s2);
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .league-chip:hover { border-color: var(--blue); color: var(--blue); }
+
+  .league-chip.on {
+    background: rgba(56,189,248,0.1);
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  .league-chip.major.on {
+    background: rgba(0,255,135,0.08);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .chips-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .chip-action {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .chip-action:hover { border-color: var(--muted2); color: var(--muted2); }
+
+  /* ── PARAMS ── */
+  .params-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+
+  .param-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    border: 1px solid rgba(167,139,250,0.25);
+    background: rgba(167,139,250,0.06);
+    color: var(--purple);
+  }
+
+  /* ── ANALYZE BTN ── */
+  .cta-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .analyze-btn {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    padding: 12px 36px;
+    background: linear-gradient(135deg, var(--green) 0%, var(--blue) 100%);
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .analyze-btn:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,255,135,0.25);
+  }
+
+  .min-conf-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .min-conf-wrap input[type=range] {
+    accent-color: var(--green);
+    width: 100px;
+  }
+
+  #confVal {
+    color: var(--green);
+    font-weight: 700;
+    min-width: 32px;
+  }
+
+  /* ── STATUS ── */
+  .status {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    min-height: 28px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── LOADER ── */
+  .loader { display: none; padding: 60px 0; text-align: center; }
+  .loader.on { display: block; }
+
+  .loader-steps {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .loader-ring {
+    width: 44px; height: 44px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-msg {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+    animation: fadeMsg 0.5s ease;
+  }
+
+  @keyframes fadeMsg { from {opacity:0;transform:translateY(4px)} to {opacity:1;transform:none} }
+
+  /* ── RESULTS ── */
+  #results { display: none; }
+  #results.on { display: block; }
+
+  /* Summary */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .stat-box {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+
+  .stat-lbl {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* Ranking header */
+  .rank-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  .rank-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .rank-subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  /* ── MATCH CARD ── */
+  .match-card {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    animation: slideIn 0.35s ease both;
+    transition: border-color 0.2s;
+  }
+
+  .match-card:hover { border-color: var(--border2); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .card-top {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  /* Rank number */
+  .card-rank {
+    width: 48px;
+    background: var(--s2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--muted);
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .card-rank.r1 { color: var(--green); }
+  .card-rank.r2 { color: var(--yellow); }
+  .card-rank.r3 { color: var(--orange); }
+
+  /* Main content */
+  .card-main {
+    flex: 1;
+    padding: 14px 16px;
+    min-width: 0;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 7px;
+    flex-wrap: wrap;
+  }
+
+  .card-league {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .card-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--blue);
+    background: rgba(56,189,248,0.08);
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+
+  .card-country {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--purple);
+    background: rgba(167,139,250,0.08);
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+
+  .card-teams {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 1px;
+    line-height: 1;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-teams .vs {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 8px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    background: var(--s3);
+    color: var(--muted2);
+    border: 1px solid var(--border);
+  }
+
+  .tag.g { background: rgba(0,255,135,0.07); color: var(--green2); border-color: rgba(0,255,135,0.2); }
+  .tag.y { background: rgba(255,193,7,0.07); color: var(--yellow); border-color: rgba(255,193,7,0.2); }
+  .tag.b { background: rgba(56,189,248,0.07); color: var(--blue); border-color: rgba(56,189,248,0.2); }
+  .tag.p { background: rgba(167,139,250,0.07); color: var(--purple); border-color: rgba(167,139,250,0.2); }
+
+  /* Score bar */
+  .card-score {
+    width: 120px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .conf-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 44px;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+
+  .conf-num.lv3 { color: var(--green); }
+  .conf-num.lv2 { color: var(--yellow); }
+  .conf-num.lv1 { color: var(--orange); }
+  .conf-num.lv0 { color: var(--muted2); }
+
+  .conf-bar-wrap {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .conf-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease;
+  }
+
+  .conf-bar.lv3 { background: var(--green); }
+  .conf-bar.lv2 { background: var(--yellow); }
+  .conf-bar.lv1 { background: var(--orange); }
+  .conf-bar.lv0 { background: var(--muted); }
+
+  .verdict {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+
+  .verdict.FORTE { background: rgba(0,255,135,0.1); color: var(--green); border: 1px solid rgba(0,255,135,0.25); }
+  .verdict.MEDIO { background: rgba(255,193,7,0.1); color: var(--yellow); border: 1px solid rgba(255,193,7,0.25); }
+  .verdict.BASSO { background: rgba(255,140,0,0.1); color: var(--orange); border: 1px solid rgba(255,140,0,0.25); }
+
+  /* Reasoning */
+  .card-reasoning {
+    padding: 10px 16px 12px 64px;
+    font-size: 12px;
+    color: var(--muted2);
+    line-height: 1.65;
+    border-top: 1px solid var(--border);
+    font-style: italic;
+  }
+
+  /* ── DISCLAIMER ── */
+  .disclaimer {
+    margin-top: 32px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  .disclaimer b { color: var(--red); }
+
+  /* ── EMPTY ── */
+  .empty {
+    padding: 80px 0;
+    text-align: center;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .brand-name { font-size: 38px; }
+    .summary { grid-template-columns: repeat(3, 1fr); }
+    .summary .stat-box:nth-child(4),
+    .summary .stat-box:nth-child(5) { display: none; }
+    .card-teams { font-size: 18px; }
+    .conf-num { font-size: 34px; }
+    .card-score { width: 90px; }
+    .card-reasoning { padding-left: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="brand">
+        <div class="brand-name">OVER 2.5</div>
+        <div class="brand-badge">PRO</div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-top:4px">
+        AI FOOTBALL INTELLIGENCE
+      </div>
+    </div>
+    <div class="header-right">
+      <div><span class="live-dot"></span>MOTORE AI ATTIVO</div>
+      <div id="hDate">—</div>
+      <div style="color:var(--green)">TUTTI I CAMPIONATI</div>
+    </div>
+  </div>
+
+  <!-- LEAGUES -->
+  <div class="section-label">Campionati — clicca per attivare/disattivare</div>
+  <div class="league-grid" id="leagueGrid">
+    <!-- Filled by JS -->
+  </div>
+  <div class="chips-actions">
+    <button class="chip-action" onclick="toggleAll(true)">TUTTI ON</button>
+    <button class="chip-action" onclick="toggleAll(false)">TUTTI OFF</button>
+    <button class="chip-action" onclick="toggleMajor()">SOLO MAJOR</button>
+  </div>
+
+  <!-- PARAMETERS -->
+  <div class="section-label">Parametri di analisi</div>
+  <div class="params-row" id="paramsRow"></div>
+
+  <!-- CTA -->
+  <div class="cta-row">
+    <button class="analyze-btn" id="analyzeBtn" onclick="run()">⚡ ANALIZZA PARTITE</button>
+    <div class="min-conf-wrap">
+      <span>SOGLIA MIN:</span>
+      <input type="range" min="50" max="85" value="58" id="confSlider" oninput="document.getElementById('confVal').textContent=this.value+'%'">
+      <span id="confVal">58%</span>
+    </div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="status" id="statusBar"></div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-msg" id="loaderMsg">Inizializzazione...</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="summary" id="summary"></div>
+    <div class="rank-header">
+      <div>
+        <div class="rank-title">CLASSIFICA OVER 2.5</div>
+        <div class="rank-subtitle">DAL PIÙ PROBABILE AL MENO PROBABILE</div>
+      </div>
+      <div id="rankDate" style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-align:right;line-height:1.8"></div>
+    </div>
+    <div id="matchList"></div>
+    <div class="disclaimer">
+      <b>⚠ DISCLAIMER</b> — Analisi fornita a puro scopo <b>informativo e ludico</b>. Il calcio è imprevedibile e nessun algoritmo garantisce certezze.
+      L'AI elabora forma recente, medie gol, H2H e motivazioni di classifica ma non sostituisce una ricerca personale approfondita.
+      <b>Non incoraggiamo scommesse di alcun tipo.</b> Usare con responsabilità.
+    </div>
+  </div>
+
+</div>
+
+<script>
+const LEAGUES = [
+  // Major
+  { name: "Serie A", country: "🇮🇹 Italia", major: true },
+  { name: "Premier League", country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra", major: true },
+  { name: "La Liga", country: "🇪🇸 Spagna", major: true },
+  { name: "Bundesliga", country: "🇩🇪 Germania", major: true },
+  { name: "Ligue 1", country: "🇫🇷 Francia", major: true },
+  // Second tier
+  { name: "Serie B", country: "🇮🇹 Italia" },
+  { name: "Championship", country: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inghilterra" },
+  { name: "Segunda División", country: "🇪🇸 Spagna" },
+  { name: "2. Bundesliga", country: "🇩🇪 Germania" },
+  { name: "Ligue 2", country: "🇫🇷 Francia" },
+  { name: "Eredivisie", country: "🇳🇱 Olanda" },
+  { name: "Pro League", country: "🇧🇪 Belgio" },
+  { name: "Primeira Liga", country: "🇵🇹 Portogallo" },
+  { name: "Super Lig", country: "🇹🇷 Turchia" },
+  { name: "Scottish Premiership", country: "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scozia" },
+  { name: "Süper Lig", country: "🇹🇷 Turchia" },
+  { name: "Ekstraklasa", country: "🇵🇱 Polonia" },
+  { name: "Czech Liga", country: "🇨🇿 Rep. Ceca" },
+  { name: "Austrian Bundesliga", country: "🇦🇹 Austria" },
+  { name: "Swiss Super League", country: "🇨🇭 Svizzera" },
+  { name: "Liga I", country: "🇷🇴 Romania" },
+  { name: "Allsvenskan", country: "🇸🇪 Svezia" },
+  { name: "Eliteserien", country: "🇳🇴 Norvegia" },
+  { name: "Veikkausliiga", country: "🇫🇮 Finlandia" },
+  { name: "Danish Superliga", country: "🇩🇰 Danimarca" },
+  { name: "Greek Super League", country: "🇬🇷 Grecia" },
+  { name: "Brasileiro Série A", country: "🇧🇷 Brasile" },
+  { name: "Argentine Primera", country: "🇦🇷 Argentina" },
+  { name: "MLS", country: "🇺🇸 USA" },
+  { name: "Liga MX", country: "🇲🇽 Messico" },
+  { name: "J1 League", country: "🇯🇵 Giappone" },
+  { name: "K League 1", country: "🇰🇷 Corea del Sud" },
+  { name: "Chinese Super League", country: "🇨🇳 Cina" },
+  { name: "A-League", country: "🇦🇺 Australia" },
+  { name: "Saudi Pro League", country: "🇸🇦 Arabia Saudita" },
+];
+
+const PARAMS = [
+  { label: "Forma recente (ultime 5)", color: "g" },
+  { label: "Media gol stagionale", color: "g" },
+  { label: "Head-to-head storico", color: "b" },
+  { label: "Motivazioni di classifica", color: "y" },
+  { label: "Gol subiti (difesa)", color: "b" },
+  { label: "Partite in casa/trasferta", color: "p" },
+  { label: "Fattore stanchezza/calendari", color: "y" },
+  { label: "Derby / Scontri diretti", color: "p" },
+  { label: "Pressing offensivo (xG)", color: "g" },
+  { label: "Meteo / campo sintetico", color: "b" },
+  { label: "Quote bookmaker implicite", color: "y" },
+  { label: "Assenze chiave (squalifiche/infortuni)", color: "p" },
+];
+
+// Init
+const grid = document.getElementById('leagueGrid');
+LEAGUES.forEach(l => {
+  const b = document.createElement('button');
+  b.className = 'league-chip on' + (l.major ? ' major' : '');
+  b.dataset.name = l.name;
+  b.dataset.major = l.major || '';
+  b.innerHTML = `${l.country} <b>${l.name}</b>`;
+  b.onclick = () => b.classList.toggle('on');
+  grid.appendChild(b);
+});
+
+const paramsRow = document.getElementById('paramsRow');
+PARAMS.forEach(p => {
+  const s = document.createElement('span');
+  s.className = `param-chip`;
+  s.style.setProperty('--c', p.color);
+  s.textContent = '✦ ' + p.label;
+  if (p.color === 'g') { s.style.background='rgba(0,255,135,0.07)'; s.style.color='#00cc6a'; s.style.border='1px solid rgba(0,255,135,0.2)'; }
+  else if (p.color === 'y') { s.style.background='rgba(255,193,7,0.07)'; s.style.color='#ffc107'; s.style.border='1px solid rgba(255,193,7,0.2)'; }
+  else if (p.color === 'b') { s.style.background='rgba(56,189,248,0.07)'; s.style.color='#38bdf8'; s.style.border='1px solid rgba(56,189,248,0.2)'; }
+  else { s.style.background='rgba(167,139,250,0.07)'; s.style.color='#a78bfa'; s.style.border='1px solid rgba(167,139,250,0.2)'; }
+  paramsRow.appendChild(s);
+});
+
+// Date
+const now = new Date();
+document.getElementById('hDate').textContent =
+  now.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).toUpperCase();
+
+function toggleAll(on) {
+  document.querySelectorAll('.league-chip').forEach(b => {
+    if (on) b.classList.add('on'); else b.classList.remove('on');
+  });
+}
+
+function toggleMajor() {
+  document.querySelectorAll('.league-chip').forEach(b => {
+    if (b.dataset.major) b.classList.add('on'); else b.classList.remove('on');
+  });
+}
+
+function getActive() {
+  return [...document.querySelectorAll('.league-chip.on')].map(b => b.dataset.name);
+}
+
+function setStatus(msg, color = 'var(--muted)') {
+  document.getElementById('statusBar').innerHTML =
+    `<span style="color:${color};font-family:'Space Mono',monospace;font-size:10px">${msg}</span>`;
+}
+
+const loaderMsgs = [
+  "Raccolta dati campionati in corso...",
+  "Analisi forma recente squadre...",
+  "Calcolo medie gol e statistiche...",
+  "Confronto head-to-head storici...",
+  "Valutazione motivazioni di classifica...",
+  "Ponderazione parametri avanzati...",
+  "Generazione ranking affidabilità...",
+  "Finalizzazione suggerimenti...",
+];
+
+let loaderInterval;
+
+function startLoader() {
+  let i = 0;
+  document.getElementById('loader').classList.add('on');
+  document.getElementById('loaderMsg').textContent = loaderMsgs[0];
+  loaderInterval = setInterval(() => {
+    i = (i + 1) % loaderMsgs.length;
+    const el = document.getElementById('loaderMsg');
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+    el.textContent = loaderMsgs[i];
+  }, 1600);
+}
+
+function stopLoader() {
+  clearInterval(loaderInterval);
+  document.getElementById('loader').classList.remove('on');
+}
+
+async function run() {
+  const leagues = getActive();
+  if (!leagues.length) { setStatus('⚠ Seleziona almeno un campionato.', 'var(--red)'); return; }
+
+  const minConf = parseInt(document.getElementById('confSlider').value);
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  document.getElementById('results').classList.remove('on');
+  startLoader();
+  setStatus('⚙ Analisi AI in esecuzione...', 'var(--yellow)');
+
+  const todayStr = now.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  const prompt = `Sei il miglior analista sportivo mondiale specializzato nel mercato OVER 2.5 gol nel calcio.
+
+DATA ODIERNA: ${todayStr}
+
+CAMPIONATI DA ANALIZZARE: ${leagues.join(', ')}
+
+PARAMETRI DA CONSIDERARE PER OGNI PARTITA:
+1. Forma recente (ultime 5 partite) di entrambe le squadre — gol segnati e subiti
+2. Media gol per partita stagionale (casa e trasferta separatamente)
+3. Head-to-head storico: % di partite over 2.5 negli ultimi 5 incontri diretti
+4. Motivazioni di classifica: lotta promozione, retrocessione, zona UEFA, già salva/retrocessa
+5. Gol subiti dalla difesa (squadre con difesa porosa = più over)
+6. Rendimento casa vs trasferta
+7. Stanchezza da calendario fitto, turni infrasettimanali
+8. Derby o scontri diretti ad alta intensità emotiva
+9. xG (expected goals) tendenza offensiva
+10. Eventuali assenze di difensori chiave o portieri titolari
+
+ISTRUZIONI:
+- Identifica le partite di OGGI o, se poche, dei prossimi 2 giorni, nei campionati richiesti
+- Dai priorità a campionati minori dove spesso ci sono più gol (serie cadette, leghe nordiche, leghe dell'est)
+- Assegna confidenza 0-100 considerando tutti i parametri
+- Includi SOLO partite con confidenza >= ${minConf}
+- Ordina dalla confidenza più alta alla più bassa
+- Massimo 12 partite
+
+Rispondi ESCLUSIVAMENTE con JSON valido, nessun testo prima o dopo, nessun backtick markdown:
+{
+  "total_analyzed": 42,
+  "matches": [
+    {
+      "rank": 1,
+      "home": "NomeSquadraCasa",
+      "away": "NomeSquadraOspite",
+      "league": "NomeCampionato",
+      "country": "NazioneBandiera",
+      "match_time": "18:00",
+      "confidence": 82,
+      "verdict": "FORTE",
+      "avg_goals_home": 2.3,
+      "avg_goals_away": 1.9,
+      "h2h_over_pct": "4/5",
+      "home_form": "VVPVV",
+      "away_form": "PVVPV",
+      "tags": [
+        {"text": "Avg gol 2.3+1.9", "type": "g"},
+        {"text": "H2H 4/5 over", "type": "g"},
+        {"text": "Difesa aperta", "type": "y"},
+        {"text": "Lotta salvezza", "type": "p"},
+        {"text": "Casa: V4/5", "type": "b"}
+      ],
+      "reasoning": "Analisi dettagliata in italiano di 2-3 frasi che spiega perché questa è una buona selezione over 2.5."
+    }
+  ]
+}
+
+Sii preciso, realistico e utilizza la tua conoscenza aggiornata sulle stagioni in corso. Per i campionati minori sfrutta la tendenza offensiva tipica di quelle leghe.`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const raw = data.content.map(i => i.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    render(parsed, minConf);
+    setStatus(`✓ Analisi completata — ${parsed.matches.length} partite selezionate su ${parsed.total_analyzed || '?'} analizzate.`, 'var(--green)');
+  } catch(e) {
+    console.error(e);
+    setStatus('✗ Errore analisi. Controlla la connessione e riprova.', 'var(--red)');
+  } finally {
+    btn.disabled = false;
+    stopLoader();
+  }
+}
+
+function levelClass(c) {
+  if (c >= 78) return 'lv3';
+  if (c >= 68) return 'lv2';
+  if (c >= 58) return 'lv1';
+  return 'lv0';
+}
+
+function render(data, minConf) {
+  const matches = data.matches || [];
+  const resultsDiv = document.getElementById('results');
+  const matchList = document.getElementById('matchList');
+  const summaryDiv = document.getElementById('summary');
+  const rankDate = document.getElementById('rankDate');
+
+  rankDate.innerHTML =
+    now.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase() +
+    `<br>SOGLIA: ${minConf}% | TROVATE: ${matches.length}`;
+
+  const forte = matches.filter(m => m.verdict === 'FORTE').length;
+  const medio = matches.filter(m => m.verdict === 'MEDIO').length;
+  const basso = matches.filter(m => m.verdict === 'BASSO').length;
+  const avgC = matches.length ? Math.round(matches.reduce((s,m)=>s+m.confidence,0)/matches.length) : 0;
+  const leagues = [...new Set(matches.map(m => m.league))].length;
+
+  summaryDiv.innerHTML = `
+    <div class="stat-box"><div class="stat-val" style="color:var(--text)">${matches.length}</div><div class="stat-lbl">Selezionate</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--green)">${forte}</div><div class="stat-lbl">Forte</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--yellow)">${medio}</div><div class="stat-lbl">Medio</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--orange)">${basso}</div><div class="stat-lbl">Basso</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--blue)">${avgC}%</div><div class="stat-lbl">Conf. media</div></div>
+  `;
+
+  if (!matches.length) {
+    matchList.innerHTML = `<div class="empty">Nessuna partita trovata con confidenza ≥ ${minConf}%.<br>Prova ad abbassare la soglia o ad aggiungere più campionati.</div>`;
+  } else {
+    matchList.innerHTML = matches.map((m, i) => {
+      const lv = levelClass(m.confidence);
+      const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+      const tags = (m.tags || []).map(t =>
+        `<span class="tag ${t.type || ''}">${t.text}</span>`
+      ).join('');
+
+      return `
+        <div class="match-card" style="animation-delay:${i*0.06}s">
+          <div class="card-top">
+            <div class="card-rank ${rankCls}">#${i+1}</div>
+            <div class="card-main">
+              <div class="card-meta">
+                <span class="card-league">${m.league}</span>
+                ${m.country ? `<span class="card-country">${m.country}</span>` : ''}
+                ${m.match_time ? `<span class="card-time">⏰ ${m.match_time}</span>` : ''}
+              </div>
+              <div class="card-teams">${m.home} <span class="vs">vs</span> ${m.away}</div>
+              <div class="card-tags">${tags}</div>
+            </div>
+            <div class="card-score">
+              <div class="conf-num ${lv}">${m.confidence}%</div>
+              <div class="conf-bar-wrap"><div class="conf-bar ${lv}" style="width:${m.confidence}%"></div></div>
+              <div class="verdict ${m.verdict}">${m.verdict}</div>
+            </div>
+          </div>
+          <div class="card-reasoning">${m.reasoning}</div>
+        </div>`;
+    }).join('');
+  }
+
+  resultsDiv.classList.add('on');
+}
+
+setStatus('Configura campionati e premi ANALIZZA.', 'var(--muted)');
+</script>
+</body>
+</html>
