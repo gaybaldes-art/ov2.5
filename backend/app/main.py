@@ -23,3 +23,11 @@ def create_forecast(request: ForecastRequest):
         return forecast(request.home_xg, request.away_xg, request.max_goals)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/v1/analyst")
+def analyst_unconfigured():
+    raise HTTPException(
+        status_code=503,
+        detail="Analyst AI non ancora configurato. La chiave del provider deve essere impostata esclusivamente sul server.",
+    )
